@@ -74,6 +74,10 @@ async def test_websocket(uri):
         print(f"Connection to {uri} failed: {e}")
     except Exception as e:
         print(f"An error occurred: {e}")
+# Write all output to a file
+    with open('output.txt', 'w') as f:
+        f.write('\n'.join(output))
+
 
 # Configuration
 websocket_uri = "wss://goddessofwater-be.dev.wicked.games/demo?gameId=9007"
