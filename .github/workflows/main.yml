@@ -1,4 +1,4 @@
-name: Scheduled Python Script Run
+name: Making 100 Bets
 on:
   schedule:
     - cron: '0 0 * * *'  # This runs daily at midnight UTC
