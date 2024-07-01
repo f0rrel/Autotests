@@ -65,27 +65,23 @@ jobs:
             echo "::set-output name=content::No output.txt file found."
         shell: bash
 
-      # Post results to Slack
+      # Post results to Slack in chunks if necessary
       - name: Post to Slack
         run: |
           echo "Posting to Slack..."
           output="${{ steps.read_artifact.outputs.content }}"
-          if [ ${#output} -gt 3000 ]; then
-            echo "Output is too large to send in one message. Splitting..."
-            echo "$output" | split -b 3000 - "output_part_"
-            parts=$(ls output_part_*)
-            for part in $parts; do
-              content=$(cat $part)
-              echo "Sending part: $part"
-              curl -X POST -H 'Content-type: application/json' --data "{
-                \"text\": \"Workflow: ${{ github.workflow }}\nStatus: ${{ job.status }}\n${{ github.event_name == 'workflow_dispatch' && 'Manually triggered' || 'Scheduled run' }}\n${{ github.event.head_commit.message }}\nOutput (part):\n$content\"
-              }" ${{ secrets.SLACK_WEBHOOK }}
-            done
-          else
+          # Split the output into chunks of 3000 characters
+          output_length=${#output}
+          chunk_size=3000
+          start=0
+          while [ $start -lt $output_length ]; do
+            end=$((start + chunk_size))
+            chunk="${output:$start:$chunk_size}"
             curl -X POST -H 'Content-type: application/json' --data "{
-              \"text\": \"Workflow: ${{ github.workflow }}\nStatus: ${{ job.status }}\n${{ github.event_name == 'workflow_dispatch' && 'Manually triggered' || 'Scheduled run' }}\n${{ github.event.head_commit.message }}\nOutput:\n$output\"
+              \"text\": \"Workflow: ${{ github.workflow }}\nStatus: ${{ job.status }}\n${{ github.event_name == 'workflow_dispatch' && 'Manually triggered' || 'Scheduled run' }}\n${{ github.event.head_commit.message }}\nOutput (chunk $start to $end):\n$chunk\"
             }" ${{ secrets.SLACK_WEBHOOK }}
-          fi
+            start=$end
+          done
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         if: always()  # This ensures the Slack message is sent whether the job succeeds or fails
