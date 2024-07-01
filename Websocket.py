@@ -2,6 +2,7 @@ import asyncio
 import websockets
 import json
 from pprint import pprint
+import os
 
 async def test_websocket(uri):
     output = []  # Initialize an empty list to store output lines
@@ -79,6 +80,12 @@ async def test_websocket(uri):
     # Write all output to a file
     with open('output.txt', 'w') as f:
         f.write('\n'.join(output))
+
+    # Check if output.txt was created
+    if os.path.isfile('output.txt'):
+        print("output.txt exists and is ready for upload.")
+    else:
+        print("output.txt was not created. The script may have failed.")
 
 # Configuration
 websocket_uri = "wss://goddessofwater-be.dev.wicked.games/demo?gameId=9007"
