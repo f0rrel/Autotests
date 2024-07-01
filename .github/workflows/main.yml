@@ -43,6 +43,8 @@ jobs:
           if [ ! -f output.txt ]; then
             echo "output.txt was not created. The script may have failed."
             exit 1
+          else
+            echo "output.txt exists and is ready for upload."
         if: always()
 
       # Download the artifact for further processing
@@ -70,6 +72,7 @@ jobs:
         run: |
           echo "Posting to Slack..."
           output="${{ steps.read_artifact.outputs.content }}"
+          echo "Output length: ${#output}"
           # Split the output into chunks of 3000 characters
           output_length=${#output}
           chunk_size=3000
@@ -77,6 +80,8 @@ jobs:
           while [ $start -lt $output_length ]; do
             end=$((start + chunk_size))
             chunk="${output:$start:$chunk_size}"
+            echo "Sending chunk from $start to $end"
+            echo "Chunk content: $chunk"
             curl -X POST -H 'Content-type: application/json' --data "{
               \"text\": \"Workflow: ${{ github.workflow }}\nStatus: ${{ job.status }}\n${{ github.event_name == 'workflow_dispatch' && 'Manually triggered' || 'Scheduled run' }}\n${{ github.event.head_commit.message }}\nOutput (chunk $start to $end):\n$chunk\"
             }" ${{ secrets.SLACK_WEBHOOK }}
