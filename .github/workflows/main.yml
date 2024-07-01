@@ -1,83 +1,48 @@
 name: Scheduled Python Script Run
-
 on:
   schedule:
     - cron: '0 0 * * *'  # This runs daily at midnight UTC
   workflow_dispatch:  # This allows manual triggering
-
 jobs:
   run_script:
     runs-on: ubuntu-latest
     steps:
-      # Checkout the repository
-      - uses: actions/checkout@v3
-
-      # Set up Python environment
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-
-      # Install dependencies
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install websockets
-        continue-on-error: true
-
-      # Run the Python script
-      - name: Run script
-        run: python Websocket_10Bets.py
-
-      # Upload the output as an artifact
-      - name: Upload results
-        uses: actions/upload-artifact@v3
-        with:
-          name: script-output
-          path: output.txt  # Ensure this path matches where output.txt is generated
-        if: always()
-
-      # Verify that the output file exists
-      - name: Check for script output
-        run: |
-          if [ ! -f output.txt ]; then
-            echo "output.txt was not created. The script may have failed."
-            exit 1
-        if: always()
-
-      # Download the artifact for further processing
-      - name: Download artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: script-output
-          path: ./artifact
-
-      # Read and format the content of the artifact
-      - name: Read and format artifact content
-        id: read_artifact
-        run: |
-          if [ -f ./artifact/output.txt ]; then
-            content=$(cat ./artifact/output.txt)
-            echo "::set-output name=content::$content"
-          else
-            echo "No output.txt file found."
-            echo "::set-output name=content::No output.txt file found."
-        shell: bash
-
-      # Post results to Slack
-      - name: Post to Slack
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          text: |
-            Workflow: ${{ github.workflow }}
-            Status: ${{ job.status }}
-            ${{ github.event_name == 'workflow_dispatch' && 'Manually triggered' || 'Scheduled run' }}
-            ${{ github.event.head_commit.message }}
-            Output:
-            ${{ steps.read_artifact.outputs.content }}
-          fields: repo,message,commit,author,action,eventName,ref,workflow
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-        if: always()  # This ensures the Slack message is sent whether the job succeeds or fails
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install websockets
+      continue-on-error: true
+    - name: Run script
+      run: python Websocket_10Bets.py
+    - name: Upload results
+      uses: actions/upload-artifact@v3
+      with:
+        name: script-output
+        path: output.txt
+      if: always()
+    - name: Check for script output
+      run: |
+        if [ ! -f output.txt ]; then
+          echo "output.txt was not created. The script may have failed."
+          exit 1
+        fi
+      if: always()
+    - name: Post to Slack
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        text: |
+          Workflow: ${{ github.workflow }}
+          Status: ${{ job.status }}
+          ${{ github.event_name == 'workflow_dispatch' && 'Manually triggered' || 'Scheduled run' }}
+          ${{ github.event.head_commit.message }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+      if: always()  # This ensures the Slack message is sent whether the job succeeds or fails
