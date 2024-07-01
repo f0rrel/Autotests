@@ -1,4 +1,4 @@
-name: Making 100 Bets
+name: Making 100 Bets (STG)
 on:
   schedule:
     - cron: '0 0 * * *'  # This runs daily at midnight UTC
