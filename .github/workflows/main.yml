@@ -3,14 +3,15 @@ name: Scheduled Python Script Run
 on:
   schedule:
     - cron: '0 0 * * *'  # This runs daily at midnight UTC
+  workflow_dispatch:  # This allows manual triggering
 
 jobs:
   run_script:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3  # Updated to v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4  # Updated to v4
       with:
         python-version: '3.x'
     - name: Install dependencies
@@ -20,7 +21,13 @@ jobs:
     - name: Run script
       run: python Websocket_10Bets.py
     - name: Upload results
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3  # Updated to v3
       with:
         name: script-output
         path: output.txt
+    - name: Check for script output
+      run: |
+        if [ ! -f output.txt ]; then
+          echo "output.txt was not created. The script may have failed."
+          exit 1
+        fi
