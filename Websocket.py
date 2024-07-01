@@ -2,18 +2,16 @@ import asyncio
 import websockets
 import json
 from pprint import pprint
-import os
 
 async def test_websocket(uri):
-    output = []  # Initialize an empty list to store output lines
     try:
         async with websockets.connect(uri) as websocket:
-            output.append(f"Connected to {uri}")
+            print(f"Connected to {uri}")
 
             # Receive the initial authentication message
             auth_response = await websocket.recv()
-            output.append("Received authentication message:")
-            output.append(pprint.pformat(json.loads(auth_response)))
+            print(f"Received authentication message:")
+            pprint(json.loads(auth_response))
 
             # First message to send
             first_message = {
@@ -32,12 +30,12 @@ async def test_websocket(uri):
 
             # Send the first message
             await websocket.send(first_message_json)
-            output.append(f"Sent: {first_message_json}")
+            print(f"Sent: {first_message_json}")
 
             # Receive the first response
             first_response = await websocket.recv()
-            output.append("Received:")
-            output.append(pprint.pformat(json.loads(first_response)))
+            print(f"Received:")
+            pprint(json.loads(first_response))
 
             # Parse the first response and extract the gameSessionId
             first_response_data = json.loads(first_response)
@@ -46,7 +44,7 @@ async def test_websocket(uri):
             if not game_session_id:
                 raise ValueError("gameSessionId not found in the response")
 
-            output.append(f"Extracted gameSessionId: {game_session_id}")
+            print(f"Extracted gameSessionId: {game_session_id}")
 
             # Second message to send
             second_message = {
@@ -65,27 +63,17 @@ async def test_websocket(uri):
 
             # Send the second message
             await websocket.send(second_message_json)
-            output.append(f"Sent: {second_message_json}")
+            print(f"Sent: {second_message_json}")
 
             # Receive the second response
             second_response = await websocket.recv()
-            output.append("Received:")
-            output.append(pprint.pformat(json.loads(second_response)))
+            print(f"Received:")
+            pprint(json.loads(second_response))
 
     except (websockets.exceptions.InvalidURI, websockets.exceptions.InvalidHandshake) as e:
-        output.append(f"Connection to {uri} failed: {e}")
+        print(f"Connection to {uri} failed: {e}")
     except Exception as e:
-        output.append(f"An error occurred: {e}")
-
-    # Write all output to a file
-    with open('output.txt', 'w') as f:
-        f.write('\n'.join(output))
-
-    # Check if output.txt was created
-    if os.path.isfile('output.txt'):
-        print("output.txt exists and is ready for upload.")
-    else:
-        print("output.txt was not created. The script may have failed.")
+        print(f"An error occurred: {e}")
 
 # Configuration
 websocket_uri = "wss://goddessofwater-be.dev.wicked.games/demo?gameId=9007"
