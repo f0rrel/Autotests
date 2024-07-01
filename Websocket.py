@@ -4,6 +4,7 @@ import json
 from pprint import pprint
 
 async def test_websocket(uri):
+    output = []  # This will store all our output
     try:
         async with websockets.connect(uri) as websocket:
             print(f"Connected to {uri}")
@@ -74,7 +75,9 @@ async def test_websocket(uri):
         print(f"Connection to {uri} failed: {e}")
     except Exception as e:
         print(f"An error occurred: {e}")
-
+ # Write all output to a file
+    with open('output.txt', 'w') as f:
+        f.write('\n'.join(output))
 # Configuration
 websocket_uri = "wss://goddessofwater-be.dev.wicked.games/demo?gameId=9007"
 
