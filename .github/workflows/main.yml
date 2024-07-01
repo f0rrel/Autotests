@@ -58,6 +58,7 @@ jobs:
         run: |
           if [ -f ./artifact/output.txt ]; then
             content=$(cat ./artifact/output.txt)
+            echo "Content: $content"
             echo "::set-output name=content::$content"
           else
             echo "No output.txt file found."
@@ -66,18 +67,25 @@ jobs:
 
       # Post results to Slack
       - name: Post to Slack
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          text: |
-            Workflow: ${{ github.workflow }}
-            Status: ${{ job.status }}
-            ${{ github.event_name == 'workflow_dispatch' && 'Manually triggered' || 'Scheduled run' }}
-            ${{ github.event.head_commit.message }}
-            Output:
-            ${{ steps.read_artifact.outputs.content }}
-          fields: repo,message,commit,author,action,eventName,ref,workflow
+        run: |
+          echo "Posting to Slack..."
+          output="${{ steps.read_artifact.outputs.content }}"
+          if [ ${#output} -gt 3000 ]; then
+            echo "Output is too large to send in one message. Splitting..."
+            echo "$output" | split -b 3000 - "output_part_"
+            parts=$(ls output_part_*)
+            for part in $parts; do
+              content=$(cat $part)
+              echo "Sending part: $part"
+              curl -X POST -H 'Content-type: application/json' --data "{
+                \"text\": \"Workflow: ${{ github.workflow }}\nStatus: ${{ job.status }}\n${{ github.event_name == 'workflow_dispatch' && 'Manually triggered' || 'Scheduled run' }}\n${{ github.event.head_commit.message }}\nOutput (part):\n$content\"
+              }" ${{ secrets.SLACK_WEBHOOK }}
+            done
+          else
+            curl -X POST -H 'Content-type: application/json' --data "{
+              \"text\": \"Workflow: ${{ github.workflow }}\nStatus: ${{ job.status }}\n${{ github.event_name == 'workflow_dispatch' && 'Manually triggered' || 'Scheduled run' }}\n${{ github.event.head_commit.message }}\nOutput:\n$output\"
+            }" ${{ secrets.SLACK_WEBHOOK }}
+          fi
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         if: always()  # This ensures the Slack message is sent whether the job succeeds or fails
