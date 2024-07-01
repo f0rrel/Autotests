@@ -18,7 +18,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     - name: Run script
-      run: python your_script.py
+      run: python Websocket_10Bets.py
     - name: Upload results
       uses: actions/upload-artifact@v2
       with:
