@@ -1,4 +1,4 @@
-name: Scheduled Python Script Run
+name: Making One Bet
 
 on:
   schedule:
