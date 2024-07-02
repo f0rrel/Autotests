@@ -1,6 +1,7 @@
 import requests
 import json
 import os
+import re
 
 def read_output_file():
     try:
@@ -10,11 +11,29 @@ def read_output_file():
         return "No output.txt file found."
 
 def extract_key_info(content):
-    lines = content.split('\n')
     key_info = []
-    for line in lines:
-        if any(keyword in line for keyword in ['Connected to', 'Sent:', 'Extracted gameSessionId:', 'isWin:', 'win:', 'wager:', 'balance:']):
-            key_info.append(line.strip())
+    
+    # Check for successful authentication
+    if "Received authentication message:" in content:
+        key_info.append("Authorization successful")
+    
+    # Check for gameSessionId extraction
+    if "Extracted gameSessionId:" in content:
+        key_info.append("gameSessionId extracted successfully")
+    
+    # Extract bet information
+    balance_match = re.search(r'"balance": (\d+)', content)
+    win_match = re.search(r'"win": (\d+)', content)
+    currency_match = re.search(r'"currency": "(\w+)"', content)
+    wager_match = re.search(r'"wager": (\d+)', content)
+    
+    if all([balance_match, win_match, currency_match, wager_match]):
+        key_info.append("Bet made successfully")
+        key_info.append(f"balance after bet: {balance_match.group(1)}")
+        key_info.append(f"win after bet: {win_match.group(1)}")
+        key_info.append(f"currency: {currency_match.group(1)}")
+        key_info.append(f"wager: {wager_match.group(1)}")
+    
     return '\n'.join(key_info)
 
 webhook_url = os.environ['SLACK_WEBHOOK_URL']
@@ -40,13 +59,6 @@ payload = {
             "text": {
                 "type": "mrkdwn",
                 "text": f"*Summary:*\n```{summary}```"
-            }
-        },
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "For full details, please check the workflow run in GitHub Actions."
             }
         }
     ]
