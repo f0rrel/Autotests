@@ -18,7 +18,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install websockets
+          pip install websockets requests
       
       - name: Run script
         run: python Websocket.py
@@ -30,45 +30,61 @@ jobs:
           path: output.txt
         if: always()
       
-      - name: Read output file
-        id: read_output
-        run: |
-          if [ -f output.txt ]; then
-            content=$(cat output.txt)
-            echo "OUTPUT_CONTENT<<EOF" >> $GITHUB_ENV
-            echo "$content" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-          else
-            echo "OUTPUT_CONTENT=No output.txt file found." >> $GITHUB_ENV
-          fi
-        shell: bash
-
-      - name: Post to Slack
-        uses: slackapi/slack-github-action@v1
+      - name: Send Slack message
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
           WORKFLOW_NAME: ${{ github.workflow }}
           JOB_STATUS: ${{ job.status }}
           EVENT_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manually triggered' || 'Scheduled run' }}
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-        with:
-          payload: |
-            {
+        run: |
+          python - <<EOF
+          import requests
+          import json
+          import os
+
+          def read_output_file():
+              try:
+                  with open('output.txt', 'r') as file:
+                      return file.read()
+              except FileNotFoundError:
+                  return "No output.txt file found."
+
+          webhook_url = os.environ['SLACK_WEBHOOK_URL']
+          workflow_name = os.environ['WORKFLOW_NAME']
+          job_status = os.environ['JOB_STATUS']
+          event_type = os.environ['EVENT_TYPE']
+          commit_message = os.environ['COMMIT_MESSAGE']
+          output_content = read_output_file()
+
+          payload = {
               "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*Workflow:* ${{ env.WORKFLOW_NAME }}\n*Status:* ${{ env.JOB_STATUS }}\n*Event:* ${{ env.EVENT_TYPE }}\n*Commit:* ${{ env.COMMIT_MESSAGE }}"
+                  {
+                      "type": "section",
+                      "text": {
+                          "type": "mrkdwn",
+                          "text": f"*Workflow:* {workflow_name}\n*Status:* {job_status}\n*Event:* {event_type}\n*Commit:* {commit_message}"
+                      }
+                  },
+                  {
+                      "type": "section",
+                      "text": {
+                          "type": "mrkdwn",
+                          "text": f"*Output:*\n```{output_content}```"
+                      }
                   }
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*Output:*\n```${{ env.OUTPUT_CONTENT }}```"
-                  }
-                }
               ]
-            }
-        if: always()
+          }
+
+          response = requests.post(
+              webhook_url,
+              data=json.dumps(payload),
+              headers={'Content-Type': 'application/json'}
+          )
+
+          if response.status_code != 200:
+              raise ValueError(f'Request to Slack returned an error {response.status_code}, the response is:\n{response.text}')
+          else:
+              print('Message posted successfully')
+          EOF
+        shell: python
