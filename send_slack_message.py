@@ -1,43 +1,48 @@
-import re
+import os
+import requests
 import json
 
-def extract_key_info(content):
-    key_info = []
-    
-    # Check for successful authentication
-    if "Received authentication message:" in content:
-        key_info.append("Authorization successful")
-    
-    # Check for gameSessionId extraction
-    if "Extracted gameSessionId:" in content:
-        key_info.append("gameSessionId extracted successfully")
-    
-    # Extract bet information
+def send_slack_message():
+    webhook_url = os.environ['SLACK_WEBHOOK_URL']
+    workflow_name = os.environ['WORKFLOW_NAME']
+    job_status = os.environ['JOB_STATUS']
+    event_type = os.environ['EVENT_TYPE']
+    commit_message = os.environ['COMMIT_MESSAGE']
+
+    # Read the content of output.txt
     try:
-        # Find all occurrences of account information
-        account_infos = re.findall(r'"account":\s*{[^}]+}', content)
-        
-        if account_infos:
-            # Use the last account info
-            last_account_info = account_infos[-1]
-            
-            # Extract balance, currency, and playerId from the last account info
-            balance_match = re.search(r'"balance":\s*(\d+)', last_account_info)
-            currency_match = re.search(r'"currency":\s*"(\w+)"', last_account_info)
-            
-            # Extract win and wager from the last game info
-            win_matches = re.findall(r'"win":\s*(\d+)', content)
-            wager_matches = re.findall(r'"wager":\s*(\d+)', content)
-            
-            if all([balance_match, currency_match]) and win_matches and wager_matches:
-                key_info.append("Bet made successfully")
-                key_info.append(f"balance after bet: {balance_match.group(1)}")
-                key_info.append(f"win after bet: {win_matches[-1]}")  # Use the last win value
-                key_info.append(f"currency: {currency_match.group(1)}")
-                key_info.append(f"wager: {wager_matches[-1]}")  # Use the last wager value
-        else:
-            key_info.append("No account information found")
-    except (IndexError, AttributeError) as e:
-        key_info.append(f"Error extracting bet information: {str(e)}")
-    
-    return '\n'.join(key_info)
+        with open('output.txt', 'r') as file:
+            output_content = file.read()
+    except FileNotFoundError:
+        output_content = "output.txt file not found"
+    except Exception as e:
+        output_content = f"Error reading output.txt: {str(e)}"
+
+    # Prepare the message
+    message = {
+        "text": f"Workflow: {workflow_name}\nStatus: {job_status}\nEvent: {event_type}\nCommit: {commit_message}\n\nOutput:\n```\n{output_content}\n```"
+    }
+
+    # Send the message
+    try:
+        response = requests.post(webhook_url, json=message)
+        response.raise_for_status()
+        print("Message sent successfully")
+        print(f"Response: {response.text}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error sending message: {str(e)}")
+
+    # Write debug information to a file
+    debug_info = f"""
+    Webhook URL: {webhook_url}
+    Workflow Name: {workflow_name}
+    Job Status: {job_status}
+    Event Type: {event_type}
+    Commit Message: {commit_message}
+    Output Content: {output_content}
+    """
+    with open('debug_info.txt', 'w') as debug_file:
+        debug_file.write(debug_info)
+
+if __name__ == "__main__":
+    send_slack_message()
