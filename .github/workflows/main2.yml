@@ -38,19 +38,32 @@ jobs:
             content="${content//'%'/'%25'}"
             content="${content//$'\n'/'%0A'}"
             content="${content//$'\r'/'%0D'}"
-            echo "::set-output name=content::$content"
+            echo "content<<EOF" >> $GITHUB_OUTPUT
+            echo "$content" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=content::No output.txt file found."
+            echo "content=No output.txt file found." >> $GITHUB_OUTPUT
           fi
+        shell: bash
+
+      - name: Prepare Slack message
+        id: slack_message
+        run: |
+          message=$(cat << EOF
+          {
+            "text": "Workflow: ${{ github.workflow }}\nStatus: ${{ job.status }}\n${{ github.event_name == 'workflow_dispatch' && 'Manually triggered' || 'Scheduled run' }}\n${{ github.event.head_commit.message }}\nOutput:\n\`\`\`${{ steps.read_output.outputs.content }}\`\`\`"
+          }
+          EOF
+          )
+          echo 'message<<EOF' >> $GITHUB_OUTPUT
+          echo "$message" >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
         shell: bash
       
       - name: Post to Slack
         uses: slackapi/slack-github-action@v1
         with:
-          payload: |
-            {
-              "text": "Workflow: ${{ github.workflow }}\nStatus: ${{ job.status }}\n${{ github.event_name == 'workflow_dispatch' && 'Manually triggered' || 'Scheduled run' }}\n${{ github.event.head_commit.message }}\nOutput:\n```${{ steps.read_output.outputs.content }}```"
-            }
+          payload: ${{ steps.slack_message.outputs.message }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         if: always()
