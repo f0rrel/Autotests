@@ -18,7 +18,7 @@ def extract_key_info(content):
         last_account_info = re.findall(r'"account":\s*{[^}]+}', content)[-1]
         
         # Extract balance, currency, and playerId from the last account info
-        balance_match = re.findall(r'"balance":\s*(\d+)', last_account_info)[-1]
+        balance_match = re.search(r'"balance":\s*(\d+)', last_account_info)
         currency_match = re.search(r'"currency":\s*"(\w+)"', last_account_info)
         
         # Extract win and wager from the last game info
