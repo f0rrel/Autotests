@@ -1,14 +1,5 @@
-import requests
-import json
-import os
 import re
-
-def read_output_file():
-    try:
-        with open('output.txt', 'r') as file:
-            return file.read()
-    except FileNotFoundError:
-        return "No output.txt file found."
+import json
 
 def extract_key_info(content):
     key_info = []
@@ -22,55 +13,25 @@ def extract_key_info(content):
         key_info.append("gameSessionId extracted successfully")
     
     # Extract bet information
-    balance_match = re.search(r'"account":\s*{\s*"balance":\s*(\d+)', content)
-    win_match = re.search(r'"win":\s*(\d+)', content)
-    currency_match = re.search(r'"currency":\s*"(\w+)"', content)
-    wager_match = re.search(r'"wager":\s*(\d+)', content)
-    
-    if all([balance_match, win_match, currency_match, wager_match]):
-        key_info.append("Bet made successfully")
-        key_info.append(f"balance after bet: {balance_match.group(1)}")
-        key_info.append(f"win after bet: {win_match.group(1)}")
-        key_info.append(f"currency: {currency_match.group(1)}")
-        key_info.append(f"wager: {wager_match.group(1)}")
+    try:
+        # Find the last occurrence of the account information
+        last_account_info = re.findall(r'"account":\s*{[^}]+}', content)[-1]
+        
+        # Extract balance, currency, and playerId from the last account info
+        balance_match = re.search(r'"balance":\s*(\d+)', last_account_info)
+        currency_match = re.search(r'"currency":\s*"(\w+)"', last_account_info)
+        
+        # Extract win and wager from the last game info
+        win_match = re.search(r'"win":\s*(\d+)', content)
+        wager_match = re.search(r'"wager":\s*(\d+)', content)
+        
+        if all([balance_match, win_match, currency_match, wager_match]):
+            key_info.append("Bet made successfully")
+            key_info.append(f"balance after bet: {balance_match.group(1)}")
+            key_info.append(f"win after bet: {win_match.group(1)}")
+            key_info.append(f"currency: {currency_match.group(1)}")
+            key_info.append(f"wager: {wager_match.group(1)}")
+    except (IndexError, AttributeError) as e:
+        key_info.append(f"Error extracting bet information: {str(e)}")
     
     return '\n'.join(key_info)
-
-webhook_url = os.environ['SLACK_WEBHOOK_URL']
-workflow_name = os.environ['WORKFLOW_NAME']
-job_status = os.environ['JOB_STATUS']
-event_type = os.environ['EVENT_TYPE']
-commit_message = os.environ['COMMIT_MESSAGE']
-
-output_content = read_output_file()
-summary = extract_key_info(output_content)
-
-payload = {
-    "blocks": [
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"*Workflow:* {workflow_name}\n*Status:* {job_status}\n*Event:* {event_type}\n*Commit:* {commit_message}"
-            }
-        },
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"*Summary:*\n```{summary}```"
-            }
-        }
-    ]
-}
-
-response = requests.post(
-    webhook_url,
-    data=json.dumps(payload),
-    headers={'Content-Type': 'application/json'}
-)
-
-if response.status_code != 200:
-    print(f'Request to Slack returned an error {response.status_code}, the response is:\n{response.text}')
-else:
-    print('Message posted successfully')
