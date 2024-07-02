@@ -22,10 +22,10 @@ def extract_key_info(content):
         key_info.append("gameSessionId extracted successfully")
     
     # Extract bet information
-    balance_match = re.search(r'"balance": (\d+)', content)
-    win_match = re.search(r'"win": (\d+)', content)
-    currency_match = re.search(r'"currency": "(\w+)"', content)
-    wager_match = re.search(r'"wager": (\d+)', content)
+    balance_match = re.search(r'"account":\s*{\s*"balance":\s*(\d+)', content)
+    win_match = re.search(r'"win":\s*(\d+)', content)
+    currency_match = re.search(r'"currency":\s*"(\w+)"', content)
+    wager_match = re.search(r'"wager":\s*(\d+)', content)
     
     if all([balance_match, win_match, currency_match, wager_match]):
         key_info.append("Bet made successfully")
@@ -41,8 +41,8 @@ workflow_name = os.environ['WORKFLOW_NAME']
 job_status = os.environ['JOB_STATUS']
 event_type = os.environ['EVENT_TYPE']
 commit_message = os.environ['COMMIT_MESSAGE']
-output_content = read_output_file()
 
+output_content = read_output_file()
 summary = extract_key_info(output_content)
 
 payload = {
