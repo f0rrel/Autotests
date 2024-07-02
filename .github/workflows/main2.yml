@@ -38,3 +38,4 @@ jobs:
           EVENT_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manually triggered' || 'Scheduled run' }}
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: python send_slack_message.py
+        continue-on-error: true
