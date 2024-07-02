@@ -35,35 +35,40 @@ jobs:
         run: |
           if [ -f output.txt ]; then
             content=$(cat output.txt)
-            content="${content//'%'/'%25'}"
-            content="${content//$'\n'/'%0A'}"
-            content="${content//$'\r'/'%0D'}"
-            echo "content<<EOF" >> $GITHUB_OUTPUT
-            echo "$content" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+            echo "OUTPUT_CONTENT<<EOF" >> $GITHUB_ENV
+            echo "$content" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
           else
-            echo "content=No output.txt file found." >> $GITHUB_OUTPUT
+            echo "OUTPUT_CONTENT=No output.txt file found." >> $GITHUB_ENV
           fi
         shell: bash
 
-      - name: Prepare Slack message
-        id: slack_message
-        run: |
-          message=$(cat << EOF
-          {
-            "text": "Workflow: ${{ github.workflow }}\nStatus: ${{ job.status }}\n${{ github.event_name == 'workflow_dispatch' && 'Manually triggered' || 'Scheduled run' }}\n${{ github.event.head_commit.message }}\nOutput:\n\`\`\`${{ steps.read_output.outputs.content }}\`\`\`"
-          }
-          EOF
-          )
-          echo 'message<<EOF' >> $GITHUB_OUTPUT
-          echo "$message" >> $GITHUB_OUTPUT
-          echo 'EOF' >> $GITHUB_OUTPUT
-        shell: bash
-      
       - name: Post to Slack
         uses: slackapi/slack-github-action@v1
-        with:
-          payload: ${{ steps.slack_message.outputs.message }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          JOB_STATUS: ${{ job.status }}
+          EVENT_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manually triggered' || 'Scheduled run' }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        with:
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Workflow:* ${{ env.WORKFLOW_NAME }}\n*Status:* ${{ env.JOB_STATUS }}\n*Event:* ${{ env.EVENT_TYPE }}\n*Commit:* ${{ env.COMMIT_MESSAGE }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Output:*\n```${{ env.OUTPUT_CONTENT }}```"
+                  }
+                }
+              ]
+            }
         if: always()
