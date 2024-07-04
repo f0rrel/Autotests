@@ -23,7 +23,7 @@ jobs:
 
     - name: Run script
       run: python Websocket_10Bets.py
-      continue-on-error: true
+      timeout-minutes: 30
 
     - name: Display Python script logs
       run: cat output.txt
