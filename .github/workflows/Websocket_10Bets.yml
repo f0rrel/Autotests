@@ -23,6 +23,11 @@ jobs:
 
     - name: Run script
       run: python Websocket_10Bets.py
+      continue-on-error: true
+
+    - name: Display Python script logs
+      run: cat output.txt
+      if: always()
 
     - name: Upload results
       uses: actions/upload-artifact@v3
@@ -35,8 +40,12 @@ jobs:
 
     - name: Check for script output
       run: |
-        if [ ! -f output.txt ] || [ ! -f key_info.txt ]; then
-          echo "output.txt or key_info.txt was not created. The script may have failed."
+        if [ ! -f output.txt ]; then
+          echo "output.txt was not created."
+          exit 1
+        fi
+        if [ ! -f key_info.txt ]; then
+          echo "key_info.txt was not created."
           exit 1
         fi
       if: always()
