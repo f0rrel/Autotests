@@ -115,5 +115,5 @@ async def test_websocket(uri):
         f.write(key_info)
 
 if __name__ == "__main__":
-    websocket_uri = "wss://goddessofwater-be.dev.wicked.games/demo?gameId=9007"
+    websocket_uri = "wss://goddessofwood-be.dev.wicked.games/rgs?token=InRva2VuPTMwZWNkOTdlLTgwYzQtNGY1ZS1iOWJhLTAxZGI0OTFmZjUyZSZjb3VudHJ5PU1FJmN1cnJlbmN5PUVVUiZ0ZXN0cGxheWVyPTAmcGxheWVyaWQ9YmFkOWU2ODYtMjEwOC00MDg0LTg0YjYtNDkwYzk1YmRkZTcxJmxhbmd1YWdlPUVOJmhvbWV1cmw9aHR0cHM6Ly93aWNrZWQuZ2FtZXMmdXJsPWh0dHBzOi8vd2FsbGV0LmRldi53aWNrZWQuZ2FtZXMvdGVzdCZhcGlrZXk9YXBpX2tleSZzaXRlaWQ9d2lja2VkZ2FtZXMi&?gameId=9004"
     asyncio.run(test_websocket(websocket_uri))
